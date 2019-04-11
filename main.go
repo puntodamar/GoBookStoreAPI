@@ -1,6 +1,7 @@
 package main
 
 import (
+	"./models"
 	"database/sql"
 	"encoding/json"
 	"github.com/gorilla/mux"
@@ -15,14 +16,8 @@ import (
 	_ "github.com/subosito/gotenv"
 )
 
-type Book struct {
-	ID     int    `json:"id"`
-	Title  string `json:"title"`
-	Author string `json:"author"`
-	Year   string `json:"year"`
-}
+var books []models.Book
 
-var books []Book
 var db *sql.DB
 
 func init() {
@@ -59,8 +54,8 @@ func main() {
 }
 
 func getBooks(w http.ResponseWriter, r *http.Request) {
-	var book Book
-	books = []Book{}
+	var book models.Book
+	books = []models.Book{}
 
 	rows, err := db.Query("SELECT * FROM books")
 	logFatal(err)
@@ -78,7 +73,7 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
-	var book Book
+	var book models.Book
 	params := mux.Vars(r)
 
 	rows := db.QueryRow(
@@ -92,7 +87,7 @@ func getBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func addBook(w http.ResponseWriter, r *http.Request) {
-	var book Book
+	var book models.Book
 	var bookID int
 
 	json.NewDecoder(r.Body).Decode(&book)
@@ -108,7 +103,7 @@ func addBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateBook(w http.ResponseWriter, r *http.Request) {
-	var book Book
+	var book models.Book
 
 	json.NewDecoder(r.Body).Decode(&book)
 
