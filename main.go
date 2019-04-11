@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
 	"github.com/subosito/gotenv"
@@ -38,7 +39,7 @@ func main() {
 
 	pgURL, err := pq.ParseURL(os.Getenv("ELEPHANTSQL_URL"))
 	logFatal(err)
-	db, err := sql.Open("postgres", pgURL)
+	db, err = sql.Open("postgres", pgURL)
 
 	logFatal(err)
 	db.Ping()
@@ -58,6 +59,22 @@ func main() {
 }
 
 func getBooks(w http.ResponseWriter, r *http.Request) {
+	var book Book
+	books = []Book{}
+
+	rows, err := db.Query("SELECT * FROM books")
+	logFatal(err)
+
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.Year)
+		logFatal(err)
+
+		books = append(books, book)
+	}
+
+	json.NewEncoder(w).Encode(books)
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
