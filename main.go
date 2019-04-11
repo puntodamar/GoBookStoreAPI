@@ -1,15 +1,16 @@
 package main
 
 import (
+	"./driver"
 	"./models"
+
 	"database/sql"
 	"encoding/json"
-	"github.com/gorilla/mux"
-	"github.com/lib/pq"
-	"github.com/subosito/gotenv"
 	"log"
 	"net/http"
-	"os"
+
+	"github.com/gorilla/mux"
+	"github.com/subosito/gotenv"
 
 	_ "database/sql"
 	_ "github.com/lib/pq"
@@ -17,30 +18,14 @@ import (
 )
 
 var books []models.Book
-
 var db *sql.DB
 
 func init() {
 	gotenv.Load()
 }
 
-func logFatal(e error) {
-	if e != nil {
-		log.Fatal(e)
-	}
-}
-
 func main() {
-
-	pgURL, err := pq.ParseURL(os.Getenv("ELEPHANTSQL_URL"))
-	logFatal(err)
-	db, err = sql.Open("postgres", pgURL)
-
-	logFatal(err)
-	db.Ping()
-	logFatal(err)
-	log.Println(pgURL)
-
+	db = driver.ConnectDB()
 	router := mux.NewRouter()
 
 	router.HandleFunc("/books", getBooks).Methods("GET")
@@ -58,13 +43,13 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 	books = []models.Book{}
 
 	rows, err := db.Query("SELECT * FROM books")
-	logFatal(err)
+	driver.LogFatal(err)
 
 	defer rows.Close()
 
 	for rows.Next() {
 		err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.Year)
-		logFatal(err)
+		driver.LogFatal(err)
 
 		books = append(books, book)
 	}
@@ -81,7 +66,7 @@ func getBook(w http.ResponseWriter, r *http.Request) {
 		params["id"])
 
 	err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.Year)
-	logFatal(err)
+	driver.LogFatal(err)
 
 	json.NewEncoder(w).Encode(book)
 }
@@ -97,7 +82,7 @@ func addBook(w http.ResponseWriter, r *http.Request) {
 		book.Title, book.Author, book.Year).
 		Scan(&bookID)
 
-	logFatal(err)
+	driver.LogFatal(err)
 
 	json.NewEncoder(w).Encode(bookID)
 }
@@ -112,9 +97,9 @@ func updateBook(w http.ResponseWriter, r *http.Request) {
 			"WHERE id=$4 RETURNING ID",
 		book.Title, book.Author, book.Year, book.ID)
 
-	logFatal(err)
+	driver.LogFatal(err)
 	rowsUpdated, err := result.RowsAffected()
-	logFatal(err)
+	driver.LogFatal(err)
 
 	json.NewEncoder(w).Encode(rowsUpdated)
 
@@ -124,10 +109,10 @@ func removeBook(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
 	result, err := db.Exec("DELETE FROM books WHERE id = $1", params["id"])
-	logFatal(err)
+	driver.LogFatal(err)
 
 	rowsDeleted, err := result.RowsAffected()
-	logFatal(err)
+	driver.LogFatal(err)
 
 	json.NewEncoder(w).Encode(rowsDeleted)
 
